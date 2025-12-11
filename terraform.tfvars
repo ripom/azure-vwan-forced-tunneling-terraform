@@ -1,0 +1,6 @@
+subscription_id     = "00000000-0000-0000-0000-000000000000"
+resource_group_name = "rg-example-demo"
+location            = "uksouth"
+admin_username      = "adminuser"
+admin_password      = "ChangeMe123!"
+vm_size             = "Standard_B2s"
