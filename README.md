@@ -122,6 +122,26 @@ The configuration is organized into multiple files:
 - Terraform >= 1.0
 - Azure CLI installed and authenticated
 
+## Supported Regions
+
+**Force tunneling with Azure Virtual WAN Hub** is only supported in the following regions:
+
+- Australia Central
+- Brazil South
+- Central India
+- East Asia
+- East US
+- India West
+- Korea Central
+- Malaysia South
+- Malaysia West
+- Qatar Central
+- UK South
+- West Central US
+
+> [!NOTE]
+> The `location` variable in `terraform.tfvars` must be set to one of these regions for forced tunneling to work correctly.
+
 ## Deployment Steps
 
 ### 1. Authenticate to Azure
@@ -261,4 +281,5 @@ These resources incur significant costs. Consider destroying the environment whe
 - [Azure Virtual WAN Documentation](https://learn.microsoft.com/en-us/azure/virtual-wan/)
 - [Azure Firewall Policy Documentation](https://learn.microsoft.com/en-us/azure/firewall/policy-rule-sets)
 - [Virtual WAN Routing Intent](https://learn.microsoft.com/en-us/azure/virtual-wan/how-to-routing-policies)
+- [Azure Virtual WAN Internet Routing](https://learn.microsoft.com/en-us/azure/virtual-wan/about-internet-routing)
 
