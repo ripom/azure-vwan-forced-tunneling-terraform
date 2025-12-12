@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **⚠️ POST-DEPLOYMENT STEP REQUIRED ⚠️**
 > 
-> This deployment requires a **mandatory post-deployment configuration step** using Azure CLI after running `terraform apply`. 
+> This deployment requires a **mandatory post-deployment configuration step** using Azure Portal after running `terraform apply`. 
 > 
 > **Without this step, force tunneling will NOT work correctly.**
 > 
@@ -15,7 +15,7 @@ This Terraform configuration deploys an Azure Virtual WAN environment with force
 
 ```
                                  ┌─────────────────────────────────────────┐
-                                 │      Internet (0.0.0.0/0)              │
+                                 │      Internet (0.0.0.0/0)               │
                                  └────────────────▲────────────────────────┘
                                                   │
                                                   │ Direct Internet Access
@@ -174,7 +174,7 @@ Type `yes` when prompted to confirm the deployment.
 
 **This step is MANDATORY to enable force tunneling for internet traffic.**
 
-After Terraform completes, you must manually add `0.0.0.0/0` to the Virtual Hub Routing Intent's Private Traffic prefixes using Azure CLI. This configuration is not yet supported by the Terraform provider.
+After Terraform completes, you must manually add `0.0.0.0/0` to the Virtual Hub Routing Intent's Private Traffic prefixes using Azure Portal. This configuration is not yet supported by the Terraform provider.
 
 **Why this is needed:**
 - Terraform can only configure routing intent with predefined destinations ("PrivateTraffic" or "Internet")
@@ -185,7 +185,7 @@ After Terraform completes, you must manually add `0.0.0.0/0` to the Virtual Hub 
 
 **RECOMMENDED: Manual Configuration via Azure Portal**
 
-The Azure REST API does not currently support adding custom prefixes to Private Traffic through automation. Use the Portal method:
+Use the Portal method:
 
 1. Navigate to **Azure Portal** → **Virtual WAN** → Your Virtual Hub (**vhub**)
 2. Go to **"Routing Intent and Routing Policies"**
@@ -193,13 +193,6 @@ The Azure REST API does not currently support adding custom prefixes to Private 
 4. In the text box, add: `0.0.0.0/0`
 5. Click **"Save"**
 6. Wait for the configuration to complete (may take a few minutes)
-
-**Why this manual step is required:**
-- Azure Portal supports adding custom IP prefixes to the Private Traffic definition
-- This feature is not yet exposed in the Terraform azurerm provider
-- The Azure REST API does not accept custom prefix properties (`privateTrafficPrefixes`, `destinationAddressPrefixes`, etc.)
-- Adding `0.0.0.0/0` tells the routing intent to treat internet traffic as "private traffic"
-- This causes internet-bound traffic to route through fw-hub, which then follows the static route to fw-dmz
 
 **What happens after configuration:**
 - Traffic from spoke VNets to internet (0.0.0.0/0) will be classified as "private traffic"
@@ -219,13 +212,12 @@ The Azure REST API does not currently support adding custom prefixes to Private 
 ### Hub Firewall Rules
 1. **Network Rule** (Priority 100) - Allow HTTP
    - Allows TCP port 80 to all destinations
-   - No Google blocking
 
 ## Testing
 
 ### Test HTTP Traffic from Spoke VM
 1. Connect to `vm-spoke` using Azure Bastion or serial console
-2. Test HTTP traffic: `curl -I http://example.com`
+2. Test HTTP traffic: `curl -I http://ifconfig.me` verify you get the fw-dmz public ip
 3. Traffic routes through fw-hub → fw-dmz → Internet
 
 ### Test Force Tunneling
