@@ -1,13 +1,11 @@
 # Azure Virtual WAN with Force Tunneling - Terraform Deployment
 
-> [!IMPORTANT]
-> **⚠️ POST-DEPLOYMENT STEP REQUIRED ⚠️**
+This Terraform configuration deploys an Azure Virtual WAN environment with force tunneling through Azure Firewall, demonstrating hub-spoke topology with custom firewall policies.
+
+> [!NOTE]
+> **Automated Force Tunneling Configuration**
 > 
-> This deployment requires a **mandatory post-deployment configuration step** using Azure Portal after running `terraform apply`. 
-> 
-> **Without this step, force tunneling will NOT work correctly.**
-> 
-> See [Step 6: Post-Deployment Configuration](#6-️-important-post-deployment-configuration-required) for details.
+> This deployment uses the **Azure API (azapi) provider** to automatically configure force tunneling by adding `0.0.0.0/0` to the Virtual Hub's default route table. No manual post-deployment steps are required.
 
 This Terraform configuration deploys an Azure Virtual WAN environment with force tunneling through Azure Firewall, demonstrating hub-spoke topology with custom firewall policies.
 
@@ -190,38 +188,27 @@ terraform apply
 
 Type `yes` when prompted to confirm the deployment.
 
-### 6. ⚠️ IMPORTANT: Post-Deployment Configuration (Required)
+## How Force Tunneling Works
 
-**This step is MANDATORY to enable force tunneling for internet traffic.**
+This deployment automatically configures force tunneling using the Azure API (azapi) provider:
 
-After Terraform completes, you must manually add `0.0.0.0/0` to the Virtual Hub Routing Intent's Private Traffic prefixes using Azure Portal. This configuration is not yet supported by the Terraform provider.
-
-**Why this is needed:**
-- Terraform can only configure routing intent with predefined destinations ("PrivateTraffic" or "Internet")
-- To achieve force tunneling, we need to add `0.0.0.0/0` as a custom prefix to the Private Traffic policy
-- This routes internet-bound traffic through the hub firewall, which then forwards it to the DMZ firewall via the static route
-
-**Run this after `terraform apply` completes:**
-
-**RECOMMENDED: Manual Configuration via Azure Portal**
-
-Use the Portal method:
-
-1. Navigate to **Azure Portal** → **Virtual WAN** → Your Virtual Hub (**vhub**)
-2. Go to **"Routing Intent and Routing Policies"**
-3. Click on **"Private Traffic"** → **"Edit Private Traffic Prefixes"**
-4. In the text box, add: `0.0.0.0/0`
-5. Click **"Save"**
-6. Wait for the configuration to complete (may take a few minutes)
-
-**What happens after configuration:**
-- Traffic from spoke VNets to internet (0.0.0.0/0) will be classified as "private traffic"
+**Automated Configuration:**
+- The `azapi_update_resource` in [vwan.tf](vwan.tf) adds `0.0.0.0/0` to the Virtual Hub's default route table
+- Traffic from spoke VNets to internet (0.0.0.0/0) is classified as "private traffic"
 - Routing intent sends this traffic through fw-hub
 - The DMZ VNet connection has a static route (0.0.0.0/0 → fw-dmz)
 - fw-hub forwards the traffic to fw-dmz, achieving force tunneling
 - fw-dmz applies HTTP-only rules before sending to internet
 
-**⚠️ Without this step, force tunneling will NOT work correctly and internet traffic from spoke VNets will bypass the DMZ firewall.**
+**Traffic Flow:**
+```
+vm-spoke → fw-hub (0.0.0.0/0 route) → fw-dmz (static route) → Internet
+```
+
+**Why azapi provider?**
+- The standard `azurerm` provider doesn't support adding custom IP prefixes to routing intent
+- The `azapi` provider allows direct Azure Resource Manager API calls
+- This enables full automation without manual post-deployment steps
 
 ## Firewall Policies
 

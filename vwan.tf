@@ -88,8 +88,8 @@ resource "azurerm_virtual_hub_routing_intent" "main" {
 }
 
 # Virtual Hub Connection for vnet-dmz
-resource "azurerm_virtual_hub_connection" "vnet1" {
-  name                      = "vhub-conn-vnet1"
+resource "azurerm_virtual_hub_connection" "dmz" {
+  name                      = "vhub-conn-dmz"
   virtual_hub_id            = azurerm_virtual_hub.main.id
   remote_virtual_network_id = azurerm_virtual_network.main.id
   internet_security_enabled = false
@@ -115,4 +115,46 @@ resource "azurerm_virtual_hub_connection" "spoke" {
   virtual_hub_id            = azurerm_virtual_hub.main.id
   remote_virtual_network_id = azurerm_virtual_network.spoke.id
   internet_security_enabled = true
+}
+
+# Force Tunneling Configuration - Add 0.0.0.0/0 to default route table
+# This configures the Virtual Hub to route internet traffic (0.0.0.0/0) through the hub firewall
+# which then forwards it to the DMZ firewall via the static route
+resource "azapi_update_resource" "vhub_default_route_table" {
+  type        = "Microsoft.Network/virtualHubs/hubRouteTables@2023-11-01"
+  resource_id = "${azurerm_virtual_hub.main.id}/hubRouteTables/defaultRouteTable"
+
+  body = jsonencode({
+    properties = {
+      routes = [
+        {
+          name            = "_policy_PrivateTraffic"
+          destinationType = "CIDR"
+          destinations = [
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16"
+          ]
+          nextHopType = "ResourceId"
+          nextHop     = azurerm_firewall.main.id
+        },
+        {
+          name            = "force_tunnel_internet"
+          destinationType = "CIDR"
+          destinations = [
+            "0.0.0.0/0"
+          ]
+          nextHopType = "ResourceId"
+          nextHop     = azurerm_firewall.main.id
+        }
+      ]
+      labels = ["default"]
+    }
+  })
+
+  depends_on = [
+    azurerm_virtual_hub_routing_intent.main,
+    azurerm_virtual_hub_connection.dmz,
+    azurerm_virtual_hub_connection.spoke
+  ]
 }
